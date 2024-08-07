@@ -1,0 +1,79 @@
+
+--------------------
+실행 환경
+--------------------
+
+Fundamental 
+--------------------
+설정 프로파일		: Spring profile 
+CACHE 			    : Kafka.EHCACHE, Redis 검토해봤으나 장애발생시 지원 어려움. no guarantee consistency, async cluster 로 latency 발생. 
+스켜줄러			: 이중화-ZooKeeper?직접구현?, dedicate, Quartz, 일시정지/재시작/unscheduled
+설정 리로딩		: DB화-Kafka 고려???. commons-configuration2. library 만 import. 구현안함.
+암호화			    : KISA_SEED_CBC 해당 싸이트의 암복호화 모듛 이용. 없을 경우, KISA SEED 사용
+트랜잭션 처리		: @UncFacade(Required), TransactionService(RequiresNew) 
+예외 처리			: UncExceptionHandler(AOP)
+로그 처리			: SLF4j(Simple Logging Facade For Java) - logback(log4j 보다 빠름, log archive, dynamic reload)
+Jennifer HOOK	    : JenniferHooker
+logDBSession 	    : UncInterceptor.logTranInfoInDBSession(...)
+다국어 처리		: 없음(곹통업무)
+Zookeeper : 분산 처리를 위한 관리 도구. 설정관리/이름관리/잠금관리
+
+oltp 
+--------------------
+온라인 FLOW:
+	-bootstrap	     : DkbankApplication, UncApplicationReadyEventListener
+	-mvc 		     : WebMvcConfig, UncInterceptor
+	-전/후처리기   : BizInterceptor
+표준전문명세로깅 : IoLogDTO
+공통영역 설계		 : CommonAreaDTO, RequestContext.get() 로 얻음 
+건수제한/페이징	 : CommonDao, TDEP20001.xml
+비동기거래			 : AsyncService
+거래코드/IO 관리
+PUSH			: WebSocket?? SSE(AsyncService)
+SSO				: 없음
+책임자승인		: 없음
+타임아웃		: 관리화면에서 거래별 조정 가능. interceptor 에서 제어(transactionService.callRequiredService 생성해라.)  @Transactional(25초) 로 구현 안됨
+
+배치 프레임워크
+--------------------
+-제어:실행,일시정지,강제종료(정상 또는 에러 상태). 
+-운영:RR/dedicate. fail-over, 재처리. ITSM 연결 위해 DB로 JOB목록 관리 
+-속성:skipException,커밋건수,tx처리,멀티쓰레딩
+-스케줄링:주기
+-유형:센터컷, onDemand
+
+--------------------
+개발환경 
+--------------------
+UML case tool
+ERWIN
+IDE(eclipse,STS)
+DB Client(Orange)
+WAS(tomcat,JEUS)
+SCM(Git,svn)
+build(maven,gradle)
+Nexus
+CI(Jenkins)
+
+소스자동생성 : 템플릿 엔진()
+단위테스트 : JUnit
+Code Inspection :  SCM 과 연결 (ex: Git/svn pre-commit hook) 
+- final 사용 금지 : 형상 적용시 일반적으로 전체 빌드 안하기 때문 
+- if (logger.isDebugEnabled) : 필수. 대량 동시 거래시 Log4j 의 경합 발생 회피.
+- 자바, sqlmap 파일의 라인 수 제한 : 유지 보수의 어려움도 있지만 sqlmap 이 클 경우 한 쿼리가 잘못되면 해당 파일의 모든 query 사용 못함.
+- sqlmap 유효성 검사.
+- 에러코드, 메시지키 유효성 검사.
+- 아키텍쳐 레이어 호출 위반 검사. 
+- UncFacade,UncService 외 어노테이션 금지.
+- System.out, e.printStackTrace 금지.
+- 패키지 생성 금지.
+- 파일명 생성 규칙 검사 : 리소스 통제. Facade, Service({업무}/common/Service 포함), Vo
+
+--------------------
+운영 환경
+--------------------
+F/W 설정 관리
+APM (jennifer)
+배치 운영 환경(Control-M)
+거래제어(온라인,배치,스케줄러)
+로그조회 (온라인,배치,스케줄러)

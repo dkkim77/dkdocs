@@ -1,0 +1,8 @@
+{
+	"name":"ims-ecs-02-stock", 
+	"config":{
+		"connector.class":"org.apache.kafka.connect.file.FileStreamSinkConnector",
+		"file":"/mnt/c/Develop/files/examples/ch7/ec/stock.csv",
+		"topic":"EAI-KEE1"
+	}
+}

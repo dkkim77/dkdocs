@@ -1,0 +1,222 @@
+1. 사전 준비
+- 모든 노드의 ntp 동기화
+- 모든 노드가 2GB 메모리, 2 CPU 이상인지 확인
+    # nproc (코어)
+    # free -h (메모리)
+    # ifconfig -a (MAC)
+- 메모리 스왑 off
+    # swapon -show
+    # swapoff -a
+- 방화벽 설정
+    내용이 많네..
+- 네트웍 설정
+  # /etc/resolv.conf 에서 dns 변경. (8.8.8.8) 
+
+2. containerd 설치 
+    2.1 사전 준비 
+      # sudo apt-get update
+      # sudo apt-get install -y apt-transport-https ca-certificates curl software-properties-common
+    - 각 패키지 설명 
+    apt-transport-https: HTTPS를 통해 패키지를 다운로드할 수 있게해줌
+    ca-certificates: SSL/TLS 연결을 위한 CA(인증 기관) 인증서를 설치합니다. 시스템이 SSL/TLS를 통해 안전하게 통신할 수 있게 해줌
+    software-properties-common: 소프트웨어 저장소를 추가하고 관리하는 데 필요한 스크립트를 제공합니다. 이는 add-apt-repository와 같은 명령을 사용할 수 있게 해줌
+
+    2.2 docker gpg 추가
+      # curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add - (deprecated)
+        curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
+
+    2.3 docker 저장소 추가
+      # echo \
+        "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu \
+        $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+      # add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
+
+    2.4 containerd.io 패키지 설치
+      # apt-get update
+      # apt-get install -y containerd.io
+
+	2.4.1 containerd 기반 cri-o 조치:
+	  # containerd config default > /etc/containerd/config.toml
+	  # vi /etc/containerd/config.toml
+	    SystemdCgroup = true  <-- false 에서 true
+    
+    2.5 containerd 서비스 시작 후 확인 
+      # systemctl restart containerd
+      # systemctl status containerd
+      # ctr run --rm docker.io/library/alpine:latest hello-world
+
+3. 쿠버네티스 설치
+    
+    3.1 노드 간 통신을 위해 iptables 에 브릿지 설
+
+        3.2.1 사전 지식 
+        - iptable : 패킷에 대해 accept 와 drop 등을 지정할 수 있으며 특정 조건으로 다양한 방식의 패킷 필터링 지원
+            # iptables -A INPUT -s 127.0.0.1 -p icmp -j DROP ( -A: append, INPUT 규칙, -s : 원천지 -j 정책 ) 
+            # iptables -A INPUT -p tcp --dport 22 -j ACCEPT (22번 포트 허용)
+            # iptables -L  (ip table 설정 보기)
+        - iptable Filter rule
+          * chain INPUT   : 서버로 들어오는 정책
+          * chain FORWARD : 서버에서 포워딩 기본 정책 ( 패킷이 이 서버가 목적지가 아닌 통과할때 적용. NAT 에서 사용 )
+          * chain OUTPUT  : 서버에서 나가는 정책
+        - iptable NAT rule
+          * DNAT(dest nat)   : prerouting. 패킷의 도착지 주소 변경. 외부에서 방화벽(외부ip) 으로 요청되는 주소로 내부사설ip 로 변환
+          * SNAT(source nat) : postrouting. 패킷의 출발지 주소 변경. 내부 사설ip 에서 외부로 나갈 때 공인ip 로 변환 
+        - 도식
+          packet -----> prerouting -----> forward -----> postrouting -----> packet
+                   |                                                   ^
+                   v                                                   |
+                 input ----------------->  server -----------------> output
+
+        3.2.2 브릿지 설정
+        - modules-load.d/k8s.conf
+            # cat <<EOF | sudo tee /etc/modules-load.d/k8s.conf
+                br_netfilter
+                EOF
+        - sysctl.d/k8s.conf
+            # cat <<EOF | sudo tee /etc/sysctl.d/k8s.conf
+                net.bridge.bridge-nf-call-ip6tables = 1
+                net.bridge.bridge-nf-call-iptables = 1
+                EOF
+            # sudo sysctl --system
+
+    3.2 kubelet, kubeadm, kubectl 설치 (master 와 node 모두)
+        - 퍼블릭 키 다운로드
+            # curl -fsSLo /etc/apt/keyrings/kubernetes-archive-keyring.gpg https://dl.k8s.io/apt/doc/apt-key.gpg
+        - kube 저장소 추가 
+            # echo "deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v1.28/deb/ /" | tee /etc/apt/sources.list.d/kubernetes.list
+            # curl -fsSL https://pkgs.k8s.io/core:/stable:/v1.28/deb/Release.key | gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+        - kubelet, kubeadm, kubectl 설치
+            # apt-get update
+            # apt-get install -y kubelet kubeadm kubectl
+
+    3.3 쿠버네티스 서비스 등록 및 시작
+            # systemctl daemon-reload
+            # systemctl restart kubelet
+
+    3.4 kubelet service 확인
+        # systemctl status kubelet.service
+            - 에러 시 4.2.1 참조 
+    3.5 버전 확인 
+        # kubelet --version
+        # kubeadm version
+        # kubectl version
+
+4. 쿠버네티스 설정
+
+    4.1 ip 확인
+            # ip addr (ifconfig 기본 설치 안됨)
+
+    4.2 Master Node 구성 (설정 완료 시 Worker Node 의 Join Key 발급)
+
+        4.2.1 Control-Plane 구성
+            # kubeadm init --apiserver-advertise-address 192.168.219.212 --pod-network-cidr=192.168.219.0/24 
+				--cri-socket /run/containerd/containerd.sock => 결과로 join key 출력 
+            - trouble shooting
+                (1) container is not runtime runnig unknown service runtime.v1.RuntimeService error
+                위와 같은 에러가 발생한다면 Ubuntu 20.04 / containerd.io 1.3.7 이상에서 발생하는 문제로 아래의 코드를 실행.                
+                    # rm /etc/containerd/config.toml  => 삭제했다가 (3)번 에러때문에 config.toml 을 복구해야했다.
+                    => 복구 : # containerd config default > /etc/containerd/config.toml
+                    # systemctl restart containerd
+                (2) [ERROR FileContent--proc-sys-net-ipv4-ip_forward]: /proc/sys/net/ipv4/ip_forward contents are not set to 1
+                    /proc/sys/net/ipv4/ip_forward는 하나의 서버에서 ip를 공유하여 포워딩 가능할 것 인지 여부 설정 
+                    값을 수정하기 위해서는 /etc/sysctl.conf를 열어 net.ipv4.ip_forward=1행의 주석을 제거
+                    # sysctl -p (파일에서 값을 읽어서 커널 매개변수를 로딩)        
+                (3) systemctl status kubelet.service 로 상태 확인 시 오류        
+                    26107 event.go:289] Unable to write event: '&v1.Event{TypeMeta:v1.TypeMeta{Kind:"", APIVersion:""}
+                    26107 pod_workers.go:1300] "Error syncing pod, skipping" err="failed to \"StartContainer\"
+                    ... 생략 ...
+                    조치 안내 링크 : https://kubernetes.io/docs/tasks/administer-cluster/kubeadm/configure-cgroup-driver/
+                        docker 기반 cri-o 조치 : 생략 
+                        containerd 기반 cri-o 조치:
+                            # containerd config default > /etc/containerd/config.toml
+                            # vi /etc/containerd/config.toml
+                                SystemdCgroup = true  <-- false 에서 true
+로 변경
+                            # vi /var/lib/kubelet/kubeadm-flags.env
+								KUBELET_KUBEADM_ARGS="--container-runtime-endpoint=unix:///var/run/containerd/containerd.sock 
+														--pod-infra-container-image=registry.k8s.io/pause:3.9 
+														--cgroup-driver=systemd"
+            	에러 로그 확인
+				# journalctl -f -u kubelet 
+
+            root 계정일 경우 환경변수 설정.
+            # export KUBECONFIG=/etc/kubernetes/admin.conf
+
+        4.2.2 kubectl 를 다른 계정으로 사용
+            - sudo kubeadm init을 실행하면 /etc/kuvernetes/admin.conf 파일이 생성된다. 
+              admin.conf에는 클러스터 및 admin 정보가 들어있고 이 파일에 접근 가능한 계정이 클러스터 관리자 계정이다.          
+                # mkdir -p $HOME/.kube
+                # cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
+                # chown $(id -u):$(id -g) $HOME/.kube/config
+
+        4.2.3 CNI (Container Network Interface) addon 설치 
+            - CNI : 컨테이너 간의 네트워크를 제어할 수 있는 플러그인으로 컨테이너 런타임에서 컨테이너의 네트워크를 사용하게 해주는 인터페이스
+                addon 종류 : Flannel, Calico, Cilium, WeavNet 등
+            - Calico 설치
+                # kubectl apply -f https://docs.projectcalico.org/manifests/calico.yaml (반드시 이것하고 아래 조치를 해야 함)
+                # curl -O https://docs.projectcalico.org/manifests/calico.yaml
+                # curl -O https://calico-v3-25.netlify.app/archive/v3.25/manifests/calico.yaml
+                # vi calico.yaml
+		  CALICO_IPV4POOL_CIDR 를 찾아서 각주 해제. kubeadm init 시 사용한 cidr 로 변경.(- name: FELIX_WIREGUARDMTU 와 같은 indent 로 조정)
+        4.2.4 설치 확인
+            # kubectl get pods --namespace kube-system
+            # kubectl get nodes
+			- trouble shooting
+			(1) coredns pending 
+				Calico 네트워크 플러그인 의 CIDR 설정과 k8s 의CIDR 설정과 맞지 않아서 발생
+				조치 : calico.yaml 다운로드하여 수정 (현재 위치에 다운로드 됨)
+					# vi calico.yaml
+						CALICO_IPV4POOL_CIDR 를 찾아서 각주 해제. kubeadm init 시 사용한 cidr 로 변경.
+					# kubectl apply -f calico.yaml
+
+	4.2.5 Reset
+  		# rm -rf /var/lib/calico
+		# rm -rf /var/run/calico
+		# rm -rf /etc/cni/net.d
+		# rm -rf /var/lib/cni
+		# iptables -F
+		# kubectl delete -f calico.yaml
+
+		# kubeadm reset
+		The reset process does not clean CNI configuration. To do so, you must remove /etc/cni/net.d
+                # rm -rf /etc/cni/net.d
+		The reset process does not reset or clean up iptables rules or IPVS tables.
+		# iptables -F
+		you must remove $HOME/.kube/config manually
+                # rm -rf $HOME/.kube/config
+		/etc/kubernetes 삭제 
+
+    4.3 Worker Node 구성
+        - 워커 노드에서 실행 				        
+            # kubeadm join 192.168.219.102:6443 --token 71um73.jh67tilgkffk8vs7 \
+	--discovery-token-ca-cert-hash sha256:a8e87370358bd165b48f0bb148235a2413bfa559a8127f2c7b14517e85730b3f
+		- control-plane 에서 노드 join 확인
+			# kubectl get nodes -o wide 
+		4.3.1 troubleshooting
+		- 에러 : unable to read config path /etc/kubernetes/manifests
+		  조치 : mkdir /etc/kubernetes/menifests 실행
+		- 에러 : kubectl describe nodes dkkim2 수행 시 
+                 reason:NetworkPluginNotReady message:Network plugin returns error: cni plugin not initialized
+		  조치 : CNI 재설치
+				# rm -rf /var/lib/calico
+				# rm -rf /var/run/calico
+				# rm -rf /etc/cni/net.d
+				# rm -rf /var/lib/cni
+				# iptables -F
+				# kubectl delete -f calico.yaml
+				# kubectl apply -f calico.yaml
+
+		4.3.2 워커 노드 re-join
+		- control-plane 에서 노드 삭제
+			# kubectl delete node dkkim-ubuntu24
+		- worker node 에서 초기화
+			# kubeadm reset
+			# iptables -F
+			# rm -rf /etc/cni/net.d
+                        # rm -rf $HOME/.kube/config
+			# rm -rf /etc/kubernetes 
+			
+			# kubeadm join 192.168.219.212:6443 --token 71um73.jh67tilgkffk8vs7 \
+	--discovery-token-ca-cert-hash sha256:a8e87370358bd165b48f0bb148235a2413bfa559a8127f2c7b14517e85730b3f
+		
+

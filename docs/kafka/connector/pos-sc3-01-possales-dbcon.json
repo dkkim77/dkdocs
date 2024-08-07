@@ -1,0 +1,14 @@
+{
+    "name":"pos-sc3-01-possales", 
+    "config":{
+        "connector.class":"io.confluent.connect.jdbc.JdbcSourceConnector",
+        "connection.url":"jdbc:mariadb://DESKTOP-SCB21V2.local:3306/pos",
+        "connection.user":"unchart77",
+        "connection.password":"asdfqwer!1",
+        "mode": "incrementing",
+        "incrementing.column.name":"seq",
+        "table.whitelist":"pos_uriage",
+        "topic.prefix":"possales-",
+        "tasks.max":"3"
+    }
+}

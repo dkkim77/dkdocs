@@ -1,0 +1,111 @@
+1. openjdk-12 다운로드
+2. STS 4.13.0 다운로드 및 설치
+	- JSP 를 인지 못해서 plugin 설치 : Eclipse Enterprise Java and Web Developer 
+3. stsworkspace 생성
+4. STS 환경설정
+	4.1 window > preference > General > workspace 에서 UTF-8 설정 
+	4.2 line delimeter 를 UNIX 로 설정 
+	4.3 General > Content Types > JSP encoding 을 UTF-8 설정 
+5. New > Spring Starter Project 생성
+	5.1 프로젝트 속성 설정
+		type         : Gradle Project
+		Packaging    : War
+		Java Version : 11
+		             : Spring Web	
+   5.2 gradle 을 통한 jar 다운로드시 각 jar에 source attachments 가 안될때 => build.gradle 의 plugin에 'eclipse-wtp' 를 추가. 		             
+6. application.properties
+	server.port=8000		
+7. application prototype 생성 시작
+8. Git 에 share project...
+ - 2021/08/13 부터 id/pwd 인증을 토큰 방식으로 변경.
+ - 설정: 우측상단 아이콘 > settings > 메뉴하단 Developer Settings > Personal access tokens > Generate new token 
+        (unchart77 repo 또는 pycharm configurationl.txt 참조)
+        이클립스에서 user id: unchart77, password : 토큰 입력 
+9. 다른 PC 에서 작업 : Git 에서 Clone -> local repository 생성
+10. import project...
+11. 컴파일 오류 > 프로젝트 우클릭 > Configure > Add gradle Nature
+    - project root 하위에 라이브러리 [Project and External Dependencies] 생성
+
+12. JSP 엔진 및 경로 설정
+	- build.gradle : JSP dependency 설정	['javax.servlet:jstl','org.apache.tomcat.embed:tomcat-embed-jasper']
+	- application.properties : 뷰 경로 지정 
+	* spring 
+		- web.xml 설정
+			ContextLoaderListener, DispatcherServlet, CharacterEncodingFilter, ViewResolver, web.xml 에 <include-prelude> 설정
+		- ApplicationContext.xml 설정
+			MessageSource, PropertySourcesPlaceholderConfigurer
+	* 오류 발생
+		- unresolved dependency javax.servlet.jstl : build.gradle 우클릭 > refresh gradle project
+	* pageEncoding 설정 
+		- jsp 페이지에 한글 문자가 있을 경우 pageEncoding 설정이 없으면 깨진다.
+		- application.properties 에 안되나???
+		
+13. 입력값 검사 규칙
+	AccountVo.java 에 Bean Validation 정의		
+	- build.gradle : dependency 설정 [org.projectlombok:lombok]
+	- STS 가 lombok 을 인식하도록 설치(java -jar lombok.jar) 
+
+14. Spring Context 설명
+				
+				WebApplicationContext (parent)
+				=> @Configuration or XML 정의를 통해 생성
+				   |               |
+				   |               |
+		WebApplicationContext   WebApplicationContext(child)
+		(REST 용)                 (UI 용)
+		@Configuration or XML   @Configuration or XML
+		           |               |
+		  DispatcherServlet     DispatcherServlet
+		  
+		: 자식에서 부모의 어플리케이션 컨택스트에 등록된 빈을 사용할 수 있음 
+
+14. DkbankApplication 에 자바기반 설정 방식 작성
+
+15. OpenAccountWebController 에 Controller 작성과 ViewController 내용.	
+
+16. 요청, 입력값검증, 화면이동
+	
+17. 예외 처리
+UncExceptionHandler.java 참조 
+
+18. 데이터 접근
+	18.1 데이터 소스
+	18.2 Spring JDBC
+	
+19. logback 설정
+
+20. EHCACHE, Redis : 중지
+
+21. Quartz 
+- DepScheduler extends QuartzJobBean 작성
+- SchedulerConfig 작성 
+- SchedulerService 작성 
+- application.yml 에 spring.quartz 설정
+- job-store-type 을 DB 로 하고 mariadb 테이블 생성 스크립트 실행 
+- job-store-type: jdbc -> 테스트 결과 quartz 가 제공하는 스키마가 요구사항을 충족 못함. 별도의 테이블 스키마 필요. 
+- 클러스터링 사용 안하고 이중화 자체 구현. 스케줄 Job 에 대한 메타 테이블도 작성  
+
+22. application-loc.yml 로 변경. -Dspring.profiles.active=loc 추가.
+- kesa_master.properties 를 서버환경별 로그인해서 수정해야 하는 나쁜 기억이..
+
+23. AWS 배포 : 
+- git 설치: sudo yum install git -y  
+- 버전 체크:git version
+- 소스 다운로드 : git clone https://github.com/dkkim77/unchart.git . [enter]
+  (dkbank 부터 clone 되었다. "." 이 없으면 repo 전체가 내려옴)
+
+24. Gradlew bootRun 로 실행 시 system property 적용
+- build.gradle 참조.
+
+25. 암복호화 : KISA SEED 사용
+		     egov 에 있는 aria wrapper 를 /dkbank/src/main/java/com/unchart/dkbank/framework/service/egov 에 import : 중단 
+	
+26. Zookeeper-Kafka : kafka가이드.txt 참조
+	
+27. 트랜잭션 처리
+28. 비동기 거래
+
+29. 배치 프레임워크
+- -Dis.batch.app=true 설정.(DkbankApplication 에서 lazyloading 설정)
+
+test

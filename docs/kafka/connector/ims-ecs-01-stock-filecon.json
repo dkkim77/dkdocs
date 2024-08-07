@@ -1,0 +1,11 @@
+{
+	"name":"ims-ecs-01-stock", 
+	"config":{
+		"connector.class":"org.apache.kafka.connect.file.FileStreamSourceConnector",
+		"file":"/mnt/c/Develop/files/examples/ch7/ims/stock.csv",
+		"topic":"EAI-KEE1",
+		"name":"stock-src"
+	},
+	"tasks":[],
+	"type":null 
+}

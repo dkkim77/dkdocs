@@ -1,0 +1,33 @@
+버전 확인
+  # lsb_release -a
+  # hostnamectl
+
+vi 탬 사이즈
+  :set ts=4
+
+방화벽 해제 
+# ufw disable 
+---------------------------------------
+IP 설정
+  # vi /etc/netplan/50-cloud-init.yaml
+
+network:
+    version: 2
+    renderer: networkd
+    ethernets:
+        ens33:
+            dhcp4: no
+            addresses:
+                - 192.168.219.102/24
+            routes:
+                - to: default
+                  via: 192.168.219.2
+            nameservers:
+                addresses: [8.8.8.8, 8.8.4.4]
+
+  # netplan apply
+  - trobleshooting
+    오류 : systemd-networkd is not running, output might be incomplete.
+    조치 : apt install netplan ; reboot
+  다시 로그인.
+ 

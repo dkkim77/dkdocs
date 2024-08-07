@@ -1,0 +1,115 @@
+Connect 아키텍쳐 구현
+
+1. 아키텍쳐 정의
+
+1.1 전자상거래 사이트에서 재고 표시
+	재고관리(로컬 파일) --> FileStream Connectors --> Kafka --> FileStream Connectors --> 전자상거래 사이트(로컬 파일)
+
+1.2 전자상거래 사이트(PostgreSQL) --> JDBC Connector --> Kafka --> S3 Connector --> 판매 예측(AWS S3)
+              POS(MariaDB)
+
+2. [File to File] Kafka Connect/Connector 준비 및 실행
+
+	2.0 구성도 
+		재고관리(로컬 파일) --> FileStream Connectors --> Kafka --> FileStream Connectors --> 전자상거래 사이트(로컬 파일)
+	
+	2.1 Connect : 컨플루언트 플랫폼이면 이미 사용 가능. 
+	2.2 Connector : Kafka 커뮤니티이면 config/connect-file-3.2.0.jar 가 존재
+	2.3 Connect 실행
+		2.3.1 standalone 방식
+		- 설정 변경
+			connect-standalone.properties : plugin.path=/home/ec2-user/products/kafka_3_2_0/libs/connect-file-3.2.0.jar 
+			connect-file-source.properties : 
+				file=/home/ec2-user/data/source/test.txt
+				connector.class=org.apache.kafka.connect.file.FileStreamSourceConnector			
+			connect-file-sink.properties : 
+				file=/home/ec2-user/data/sink/test.sink.txt
+				connector.class=org.apache.kafka.connect.file.FileStreamSinkConnector
+		- 실행 : connect-standalone.sh ../config/connect-standalone.properties ../config/connect-file-source.properties ../config/connect-file-sink.properties
+		2.3.2 distributed 방식
+		- 설정 변경
+			connect-distributed.properties : 
+					bootstrap.servers=localhost:9092	# kafka cluster
+					group.id=connect-cluster			# Kafka Connect 는 여러 서버로 하나의 클러스터를 구성하는데 동일한 클러스터 내의 서버는 동일한 group.id 로 설정.
+					listeners=HTTP://localhost:8083		# REST API url 
+		- 실행 : connect-distributed.sh ../config/connect-distributed.properties
+	2.4 REST API
+		2.4.1 connect 버전 확인
+		- $ curl http://localhost:8083[enter]
+		2.4.2 사용가능한 Connector 플러그인 목록 조회 (json 출력을 pretty out 으로 json.tool 이용) 
+		- $ curl http://localhost:8083/connector-plugins | python -m json.tool 
+		2.4.3 Source Connector 플러그인 실행 
+		- $
+	-----------------------------------------
+				For Windows
+	-----------------------------------------
+	
+	> type C:\Develop\files\kafka\file-source-test.json | curl -X POST -d @- http://localhost:8083/connectors --header "content-Type:application/json"
+	
+		2.4.4 실행중인 Connector 목록 조회
+		- $ curl http://localhost:8083/connectors
+		
+		2.4.5 커넥터를 통해 TOPIC 에 들어온 데이터 확인
+		- kafka-console-consumer.bat --bootstrap-server localhost:9092 --topic TOPIC-filesrc --from-beginning 
+		
+		2.4.6 Sink Connector 플러그인 실행 (주의사항 : json 파일 속성이 topic 이 아니라 topic 라는 점)
+		> type C:\Develop\files\kafka\file-sink-test.json | curl -X POST -d @- http://localhost:8083/connectors --header "content-Type:application/json"
+	
+		2.4.5 실행중인 Connector 삭제
+		- $ curl -X DELETE http://localhost:8083/connectors/{connector 명}
+		
+3. [DB to File(원래는 S3)] Kafka Connect/Connector 준비 및 실행
+		
+	3.0 구성도
+	전자상거래 사이트(PostgreSQL) --> JDBC Connector --> Kafka --> S3 Connector --> 판매 예측(AWS S3)
+	              POS(MariaDB)	
+	              
+	3.1 PostgreSQL 설치 및 데이터 준비 
+		3.1.1 windows 용 설치 후 
+		- 사용자 생성: pgAdmin > Login/Group Role > create... > General tab > 사용자 이름 입력, Definition tab > password 입력 
+		- DB 생성 : Databases > create... >  ec 입력 
+		- table 생성 : pgAdmin 이 느려서 pSql shell 에서 DDL 로 생성 
+		- 데이터 생성
+		INSERT INTO ec_uriage(seq, sales_time, sales_id, item_id, amount, unit_price) values (1,'2022-11-11 11:16:00', 'ECS0001','ITEM001',2,300);
+		INSERT INTO ec_uriage(seq, sales_time, sales_id, item_id, amount, unit_price) values (2,'2022-11-11 11:16:10', 'ECS0002','ITEM002',1,500);
+	3.2 MariaDB 준비
+		3.2.1 설치가 이미 되어 있고 HeidiSQL 은 계속 죽어서 shell 에서 로그인
+		- 로그인 : > mysql -u unchart77 -p
+		- DB 생성 :
+		- table 생성 : pos_uriage
+		- 데이터 생성 
+		INSERT INTO pos_uriage(seq, sales_time, sales_id, item_id, amount, unit_price) values (1,'2022-11-11 11:16:00', 'POSS0001','SEOUL','ITEM001',2,300);
+		INSERT INTO pos_uriage(seq, sales_time, sales_id, item_id, amount, unit_price) values (2,'2022-11-11 11:16:10', 'POSS0002','PUSAN','ITEM002',1,500);
+	3.3 Connector 준비
+		3.3.1 다운로드 : confluent 에서 jdbc connector 다운로드. 해당 jdbcdriver 다운로드.
+		3.3.2 설정 : 
+		- connect-distributed.properties : 
+				plugin.path=/Develop/java/confluent-7.3.0/share/java/confluentinc-kafka-connect-jdbc-10.6.0/lib 추가 
+		- plugin.path 에 지정한 위치로 mariadb-java-client-3.0.9.jar 를 위치시킨다.
+          => 비 docker 버전(zip버전)일 경우 인식이 안되서 bin/connect-distributed 에 CLASSPATH 에 jar 를 직접 추가        
+        - MariaDB unchart77 사용자의 권한 설정 > 자격증명 > 호스트에서 > 모든곳에서 접근 가능으로 설정.(WSL2 에서 접근하므로)
+        
+		3.3.3 Source Connector 확인 및 실행 
+		- curl http://localhost:8083/connectors
+		- type C:\Develop\files\kafka\jdbc-source-postgres-test.json | curl -X POST -d @- http://localhost:8083/connectors --header "content-Type:application/json"
+        
+		- cat /mnt/c/Develop/java/confluent-7.3.0/x_con_define/pos-sc3-01-possales-dbcon.json | curl -X POST -d @- http://localhost:8083/connectors --header "content-Type:application/json"
+		
+		- connector json 예.
+        {
+            "name":"pos-sc3-01-possales", 
+            "config":{
+                "connector.class":"io.confluent.connect.jdbc.JdbcSourceConnector",
+                "connection.url":"jdbc:mariadb://DESKTOP-SCB21V2.local:3306/pos",
+                "connection.user":"unchart77",
+                "connection.password":"asdfqwer!1",
+                "mode": "incrementing",
+                "incrementing.column.name":"seq",
+                "table.whitelist":"pos_uriage",
+                "topic.prefix":"possales-",
+                "tasks.max":"3"
+            }
+        }
+        "topic.prefix" 설명 : 카프카에 데이터를 넣을 때 토픽명을 결정할 접두어를 지정. 접두어+테이블명이 토픽명이 된다
+        connection.url 은 VM 에서 outer 로 접근하기때문에 localhost 가 아님.  jdbc:mariadb://DESKTOP-SCB21V2.local:3306/pos
+	

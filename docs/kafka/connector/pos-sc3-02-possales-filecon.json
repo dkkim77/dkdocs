@@ -1,0 +1,8 @@
+{
+    "name":"pos-sc3-02-possales", 
+    "config":{
+        "connector.class":"org.apache.kafka.connect.file.FileStreamSinkConnector",
+        "file":"/mnt/c/Develop/files/examples/ch7/sc3/possales.csv",
+        "topics":"possales-pos_uriage"
+    }
+}

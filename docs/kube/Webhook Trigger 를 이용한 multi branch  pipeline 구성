@@ -1,0 +1,9 @@
+
+si-runtime-common  - 1.0.0-SNAPSHOT - main branch ->  git push -> si-runtime 개발서버 배포용 Jenkins JOB 생성  -- si-runtime pod 
+                                     
+                                    - john branch ->  STS save -> devtool springboot 재시작 - 로컬환경 배포  
+                                    - Mary branch ->  git push -> WebHook Trigger 개발서버 배포용 Job 생성    -- si-runtime-test 자동 배포 
+                                    - Jane branch ->
+
+매일 09:00 new branch 분기 
+매일 17:00 main 과 merge

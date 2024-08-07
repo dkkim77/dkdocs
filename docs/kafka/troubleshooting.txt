@@ -1,0 +1,94 @@
+************************************************************************************************
+		템플릿 
+************************************************************************************************		
+0.	이벤트     : 
+	에러 메시지 : 
+	원인      : 
+	조치      :  
+************************************************************************************************	
+1.	이벤트     : kafka 클러스터 기동시 다음 오류 발생.
+	에러 메시지 : 
+[2022-11-02 13:07:32,257] WARN [SocketServer listenerType=ZK_BROKER, nodeId=0] Unexpected error from /198.235.24.18 (channelId=172.31.43.251:9092-198.235.24.18:61888-18); closing connection (org.apache.kafka.common.network.Selector)
+org.apache.kafka.common.network.InvalidReceiveException: Invalid receive (size = 1195725856 larger than 104857600)
+        at org.apache.kafka.common.network.NetworkReceive.readFrom(NetworkReceive.java:105)
+        at org.apache.kafka.common.network.KafkaChannel.receive(KafkaChannel.java:452)
+        at org.apache.kafka.common.network.KafkaChannel.read(KafkaChannel.java:402)
+        at org.apache.kafka.common.network.Selector.attemptRead(Selector.java:674)
+        at org.apache.kafka.common.network.Selector.pollSelectionKeys(Selector.java:576)
+        at org.apache.kafka.common.network.Selector.poll(Selector.java:481)
+        at kafka.network.Processor.poll(SocketServer.scala:1144)
+        at kafka.network.Processor.run(SocketServer.scala:1047)
+        at java.lang.Thread.run(Thread.java:750)	
+	원인      : 
+	조치      : 
+	Thankfully, Kafka support message compression.  
+	Thankfully again, max message size in all the above equations corresponds to compressed size.  
+	Luckily, in our case the messages are text messages and the compression ratio was superb.  
+	Our 300 MB message came to 50 MB after GZIP compression.   So, we have enabled compression.
+
+2. 이벤트     : connect-standalone.sh 수행 중 발생. 성공적으로 데이터 송신이 된 후 한참 후 발생 
+   에러 메시지 :
+[2022-10-27 16:41:31,748] ERROR [local-file-sink|task-0] WorkerSinkTask{id=local-file-sink-0} Commit of offsets threw an unexpected exception for sequence number 5: {connect-test-0=OffsetAndMetadata{offset=2, leaderEpoch=null, metadata=''}} (org.apache.kafka.connect.runtime.WorkerSinkTask:269)
+org.apache.kafka.clients.consumer.CommitFailedException: Offset commit cannot be completed since the consumer is not part of an active group for auto partition assignment; it is likely that the consumer was kicked out of the group.
+        at org.apache.kafka.clients.consumer.internals.ConsumerCoordinator.sendOffsetCommitRequest(ConsumerCoordinator.java:1231)
+        at org.apache.kafka.clients.consumer.internals.ConsumerCoordinator.doCommitOffsetsAsync(ConsumerCoordinator.java:1042)
+        at org.apache.kafka.clients.consumer.internals.ConsumerCoordinator.commitOffsetsAsync(ConsumerCoordinator.java:1008)
+        at org.apache.kafka.clients.consumer.KafkaConsumer.commitAsync(KafkaConsumer.java:1573)
+   원인       :
+   조치       :
+   
+3. 이벤트 : windows 환경에서 kafka 를 기동 시 간헐적으로 오류 발생
+    에러 메시지 :
+    java.nio.file.FileSystemException: C:\Develop\temp\kafka-logs\__consumer_offsets-13\00000000000000000000.timeindex.cleaned: 다른 프로세스가 파일을 사용 중이기 때문에 프로세스가 액세스 할 수 없습니다.
+
+        at sun.nio.fs.WindowsException.translateToIOException(WindowsException.java:86)
+        at sun.nio.fs.WindowsException.rethrowAsIOException(WindowsException.java:97)
+        at sun.nio.fs.WindowsException.rethrowAsIOException(WindowsException.java:102)
+        at sun.nio.fs.WindowsFileSystemProvider.implDelete(WindowsFileSystemProvider.java:269)
+        at sun.nio.fs.AbstractFileSystemProvider.deleteIfExists(AbstractFileSystemProvider.java:108)
+        at java.nio.file.Files.deleteIfExists(Files.java:1165)
+        at kafka.log.UnifiedLog$.deleteFileIfExists(UnifiedLog.scala:1837)
+        at kafka.log.LogSegment$.deleteIfExists(LogSegment.scala:683)
+        at kafka.log.LocalLog$.createNewCleanedSegment(LocalLog.scala:973)
+        at kafka.log.Cleaner.cleanSegments(LogCleaner.scala:567)
+        at kafka.log.Cleaner.$anonfun$doClean$6(LogCleaner.scala:537)
+        at kafka.log.Cleaner.$anonfun$doClean$6$adapted(LogCleaner.scala:536)
+        at scala.collection.immutable.List.foreach(List.scala:333)
+        at kafka.log.Cleaner.doClean(LogCleaner.scala:536)
+        at kafka.log.Cleaner.clean(LogCleaner.scala:501)
+        at kafka.log.LogCleaner$CleanerThread.cleanLog(LogCleaner.scala:385)
+        at kafka.log.LogCleaner$CleanerThread.cleanFilthiestLog(LogCleaner.scala:357)
+        at kafka.log.LogCleaner$CleanerThread.tryCleanFilthiestLog(LogCleaner.scala:336)
+        at kafka.log.LogCleaner$CleanerThread.doWork(LogCleaner.scala:323)
+        at kafka.utils.ShutdownableThread.run(ShutdownableThread.scala:96)
+[2022-11-25 17:43:53,272] WARN Stopping serving logs in dir C:\Develop\temp\kafka-logs (kafka.log.LogManager)
+[2022-11-25 17:43:53,297] ERROR Shutdown broker because all log dirs in C:\Develop\temp\kafka-logs have failed (kafka.log.LogManager)
+   원인       : 불명
+   조치       : data dir 을 삭제. 임시 조치일 뿐..
+   
+4.	이벤트     : confluent 배포판 설치 후 zookeeper 기동시 다음 오류 발생.
+    환경        : windows10, confluent-7.3.0\bin\windows\zookeeper-server-start.bat 로 실행.
+	에러 메시지 : Classpath is empty.
+	원인        : 배포판에서 windows 스크립트를 재작성하지 않고 community 버전 그대로 옮겨 놓은 듯.
+	                run_class.bat 를 분석해보면 배포판에서 lib 이 위치한 confluent-7.3.0\share\java\kafka 디렉토리에 대한 설정이 없다.
+	조치        : cygwin 으로 변경.                
+
+5.	이벤트     : confluent 배포판 설치 후 zookeeper 기동시 다음 오류 발생.
+    환경        : windows10, open-jdk12, cygwin 에서 confluent-7.3.0\bin\zookeeper-server-start 로 실행.
+	에러 메시지 : Invalid decorator /logs/zookeeper-gc.log
+	원인        : 불명
+	조치        : jdk8 로 변경. 정상 동작.
+	
+6. 	이벤트     : Jdbc connector 를 등록 시 오류 발생. 
+    환경        : windows10, open-jdk11, wsl2. mariadb
+	에러 메시지 : SQLException: No suitable driver found for jdbc:mariadb://localhost:3306/pos
+	원인        : 불명
+	조치        : bin/connect-distributed 에 CLASSPATH 에 jar 를 직접 추가. kafka 를 docker 버전으로 설치해서 하면 필요없는 작업일 수도. 
+
+7. 	이벤트     : File sink connector 를 등록 시 오류 발생. 
+    환경        : windows10, open-jdk11, wsl2. mariadb
+	에러 메시지 : Must configure one of topics or topics.regex\nMust configure one of topics or topics.regex
+	원인        : json connector 설정에 topic 이 아니라 topics 임.
+	조치        : . 
+    
+    
