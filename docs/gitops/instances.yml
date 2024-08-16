@@ -1,0 +1,11 @@
+instances:
+  - name: elastic
+    dns:
+      - elastic.unchart.com
+    ip:
+      - 192.168.219.113
+  - name: kibana
+    dns:
+      - kibana.unchart.com
+    ip:
+      - 192.168.219.113
