@@ -105,7 +105,9 @@ Verifying - Enter Export Password:{비밀번호 입력 안해도 됨}
         cmd 창을 관리자모드로 실행
         $ES_PATH/bin> .\elasticsearch-keystore add xpack.security.http.ssl.keystore.secure_password [enter]
             p12 생성 시 입력한 비밀번호를 입력(없으면 그냥 enter)~~~
-    
+
+# Elastic Stack SSL 설정
+    + https://www.elastic.co/kr/blog/configuring-ssl-tls-and-https-to-secure-elasticsearch-kibana-beats-and-logstash
 # ElasticSearch
 1. 설치
     - windows 용 zip 다운로드 > 압축풀기 
@@ -148,3 +150,28 @@ Verifying - Enter Export Password:{비밀번호 입력 안해도 됨}
     - 로그인 폼이 표시되면 elastic 계정과 비밀번호를 입력함
                     
 # LogStash
+1. 설치
+    - windows 용 zip 다운로드 > 압축풀기 
+2. 설정    
+    - logstash_system 계정의 비밀번호를 생성
+        + elasticsearch 설치 경로에서 bin/elasticsearch-reset-password --username logstash_system -i --url https://elastic.unchart.com:9200[enter]
+    - logstash.yml 수정
+     
+3. 실행
+    - logstash -e "input {stdin{}} output {stdout{}}"
+    - 실행한 창에서 hello world 를 입력한다.
+    - 실행 결과
+    <pre><code>
+hello world [enter]
+{
+    "@timestamp" => 2024-08-18T08:47:23.183353600Z,
+         "event" => {
+        "original" => "hello world\r"
+    },
+      "@version" => "1",
+          "host" => {
+        "hostname" => "KDK-NB"
+    },
+       "message" => "hello world\r"
+}
+    </code></pre>
