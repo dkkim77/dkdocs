@@ -1,42 +1,60 @@
-1. 사전 준비
+<h1>쿠버네티스 환경 구축</h1><br>
+
+----------------------------------------------------
+
+## <h2>목 차</h2>
+* [사전 준비](#1.-사전-준비)
+* [CRI Runtime](#2.-CRI-Runtime)
+  * [다운로드](#2.1-다운로드)
+  * [압축풀기](#2.2-압축풀기)
+  * [containerd 시작](#2.3-containerd-시작)
+  * [runc 설치](#2.4-runc-설치)
+  * [CNI 설치](#2.5-CNI-설치)
+  * [설정](#2.6-설정)
+* [Kubernetes 설치](#3.-Kubernetes-설치)
+
+----------------------------------------------------
+
+##1. 사전 준비
+
 - 방화벽 및 리눅스 보안 프로그램 종료 (보안 프로그램이 쿠버 실행을 차단하여 정상적으로 작동하지 않음을 미연에 방지)
 - 메모리 스왑 종료 (idle한 자원을 활용하기 위한 방법이지만 ,쿠버에선 정상작동 안될 가능성이 있어서 꺼놓음)
 - 도메인 및 라우팅 설정 ( node끼리 통신하기 위해서 서로 알고있어야하며 iptable 라우팅 설정을 따르도록 해야함)
 - 쿠버네티스 repository 추가 (yum으로 쿠버네티스 파일을 다운로드받을 때, 해당 파일을 들고 있는 저장소를 추가해줌)
 - yum update (yum의 정상동작을 위해 update)
-# hostnamectl set-hostname uncmaster
-# swapoff -a && sudo sed -i '/ swap / s/^\(.*\)$/#\1/g' /etc/fstab
-# setenforce 0
-# sed -i --follow-symlinks 's/SELINUX=enforcing/SELINUX=permissive/g' /etc/sysconfig/selinux
-# systemctl disable firewalld
-# systemctl stop firewalld
+\# hostnamectl set-hostname uncmaster
+\# swapoff -a && sudo sed -i '/ swap / s/^\(.*\)$/#\1/g' /etc/fstab
+\# setenforce 0``
+\# sed -i --follow-symlinks 's/SELINUX=enforcing/SELINUX=permissive/g' /etc/sysconfig/selinux
+\# systemctl disable firewalld
+\# systemctl stop firewalld
 
-2. CRI Runtime 설치 및 설정
- 2.1 다운로드 
+##2. CRI Runtime
+###2.1 다운로드 
    https://github.com/containerd/containerd/releases
- 2.2 압축풀기
+###2.2 압축풀기
    # tar Cxzvf /usr/local containerd-1.6.2-linux-amd64.tar.gz
- 2.3 systemd 를 이용해서 containerd 기동
+###2.3 containerd 시작
    - containerd.service file 다운로드 : 
      https://raw.githubusercontent.com/containerd/containerd/main/containerd.service 를
      /usr/local/lib/systemd/system/containerd.service 로 다운로드.
    - # systemctl daemon-reload
     # systemctl enable --now containerd
- 2.4 runc 설치
+###2.4 runc 설치
    -  https://github.com/opencontainers/runc/releases 다운로드  /usr/local/sbin/runc 에 설치
    - # install -m 755 runc.amd64 /usr/local/sbin/runc
- 2.5 CNI 설치 
+###2.5 CNI 설치 
    - https://github.com/containernetworking/plugins/releases 다운로드
    - # mkdir -p /opt/cni/bin
      # tar Cxzvf /opt/cni/bin cni-plugins-linux-amd64-v1.1.1.tgz
-2.6 설정 
+###2.6 설정 
     # containerd config default > /etc/containerd/config.toml
     # vi /etc/containerd/config.toml
          SystemdCgroup = true  <-- false 에서 true
 
     # systemctl restart containerd
 
-3. Kubernetes 설치 및 설정
+##3. Kubernetes 설치
   3.1 쿠버네티스 yum repo 추가
 # cat <<EOF | tee /etc/yum.repos.d/kubernetes.repo
 [kubernetes]
