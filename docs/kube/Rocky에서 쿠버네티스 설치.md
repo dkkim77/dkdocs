@@ -55,15 +55,16 @@
      # tar Cxzvf /opt/cni/bin cni-plugins-linux-amd64-v1.1.1.tgz
      ```     
 ### 2.6 Configuration 
-    ```bash
+```bash
     # containerd config default > /etc/containerd/config.toml
     # vi /etc/containerd/config.toml
          SystemdCgroup = true  <-- false 에서 true
     # systemctl restart containerd
-    ```    
+```    
 ## Install Kubernetes
 ### 3.1 쿠버네티스 yum repo 추가
-  ``# cat <<EOF | tee /etc/yum.repos.d/kubernetes.repo``
+```bash
+# cat <<EOF | tee /etc/yum.repos.d/kubernetes.repo
 [kubernetes]
 name=Kubernetes
 baseurl=https://pkgs.k8s.io/core:/stable:/v1.29/rpm/
@@ -72,37 +73,38 @@ gpgcheck=1
 gpgkey=https://pkgs.k8s.io/core:/stable:/v1.29/rpm/repodata/repomd.xml.key
 exclude=kubelet kubeadm kubectl cri-tools kubernetes-cni
 EOF
+```
 ### 3.2 설치
-  # yum install -y kubelet kubeadm kubectl --disableexcludes=kubernetes
+``# yum install -y kubelet kubeadm kubectl --disableexcludes=kubernetes``
 ### 3.3 kubeadm 실행 전 kubelet 서비스 시작 
-  ``# systemctl enable --now kubelet``
+``# systemctl enable --now kubelet``
 ### 3.4 kubelet cgroup driver 설정
   - In v1.22 and later, if the user does not set the cgroupDriver field under KubeletConfiguration, kubeadm defaults it to systemd.
 #### 3.4.1 브릿지 설정
 	- modules-load.d/k8s.conf
-            ```bash
+        ```bash
 	    # cat <<EOF | sudo tee /etc/modules-load.d/k8s.conf
 		br_netfilter
 		EOF
-            ```
+        ```
 	- sysctl.d/k8s.conf
-            ```bash
+        ```bash
 	    # cat <<EOF | sudo tee /etc/sysctl.d/k8s.conf
 		net.bridge.bridge-nf-call-ip6tables = 1
 		net.bridge.bridge-nf-call-iptables = 1
 		EOF
 	    # sudo sysctl --system
-            ```
+        ```
 ### 3.5 클러스터 생성
-   ``# kubeadm init --apiserver-advertise-address 192.168.219.212 --pod-network-cidr=192.168.219.0/24 --cri-socket /run/containerd/containerd.sock``
-   - 결과 : kubeadm join 192.168.219.212:6443 --token le7rqm.vtgjyt3tuzz5qj2m --discovery-token-ca-cert-hash sha256:b10887df40585e20d2c9cd438d16f54262e87fb1e5306c10940fc069259b2fa4 
+```bash
+# kubeadm init --apiserver-advertise-address 192.168.219.212 --pod-network-cidr=192.168.219.0/24 --cri-socket /run/containerd/containerd.sock``
+   결과 : kubeadm join 192.168.219.212:6443 --token le7rqm.vtgjyt3tuzz5qj2m --discovery-token-ca-cert-hash sha256:b10887df40585e20d2c9cd438d16f54262e87fb1e5306c10940fc069259b2fa4 
    /etc/sysctl.conf를 열어 net.ipv4.ip_forward=1행의 주석을 제거
-   ```bash
         # vi /var/lib/kubelet/kubeadm-flags.env
 	KUBELET_KUBEADM_ARGS="--container-runtime-endpoint=unix:///var/run/containerd/containerd.sock 
 			--pod-infra-container-image=registry.k8s.io/pause:3.9 
 			--cgroup-driver=systemd"
-   ```
+```
 ### 3.6 CNI (Pod network) add-on 설치
   - CNI 가 설치된 후에 CoreDNS 가 시작된다. 
   - Calico 설치
