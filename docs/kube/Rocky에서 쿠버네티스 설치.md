@@ -3,19 +3,19 @@
 ----------------------------------------------------
 
 ## <h2>목 차</h2>
-* [사전 준비](#1-prerequisite)
-* [CRI Runtime](#2-cri-runtime)
+* [사전 준비](#prerequisite)
+* [CRI Runtime](#cri-runtime)
   * [다운로드](#2-1-download)
   * [압축풀기](#2-2-extract-tar-file)
   * [containerd 시작](#2-3-start-containerd)
   * [runc 설치](#2-4-install-runc)
   * [CNI 설치](#2-5-install-cni)
   * [설정](#2-6-configuration)
-* [Kubernetes 설치](#3-install-kubernetes)
+* [Kubernetes 설치](#install-kubernetes)
 
 ----------------------------------------------------
 
-##1. Prerequisite
+##Prerequisite
 
 - 방화벽 및 리눅스 보안 프로그램 종료 (보안 프로그램이 쿠버 실행을 차단하여 정상적으로 작동하지 않음을 미연에 방지)
 - 메모리 스왑 종료 (idle한 자원을 활용하기 위한 방법이지만 ,쿠버에선 정상작동 안될 가능성이 있어서 꺼놓음)
@@ -31,7 +31,7 @@
 \# systemctl stop firewalld
 ``
 
-##2. CRI Runtime
+##CRI Runtime
 
 ###2.1 download 
    https://github.com/containerd/containerd/releases   
@@ -60,7 +60,7 @@
 
     # systemctl restart containerd
 
-##3. Install Kubernetes
+##Install Kubernetes
   3.1 쿠버네티스 yum repo 추가
 # cat <<EOF | tee /etc/yum.repos.d/kubernetes.repo
 [kubernetes]
