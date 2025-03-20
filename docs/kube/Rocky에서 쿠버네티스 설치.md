@@ -10,59 +10,69 @@
   * [containerd 시작](#2-3-start-containerd)
   * [runc 설치](#2-4-install-runc)
   * [CNI 설치](#2-5-install-cni)
-  * [설정](#2-6-configuration)
 * [Kubernetes 설치](#install-kubernetes)
 
 ----------------------------------------------------
 
 ## Prerequisite
 
-- 방화벽 및 리눅스 보안 프로그램 종료 (보안 프로그램이 쿠버 실행을 차단하여 정상적으로 작동하지 않음을 미연에 방지)
-- 메모리 스왑 종료 (idle한 자원을 활용하기 위한 방법이지만 ,쿠버에선 정상작동 안될 가능성이 있어서 꺼놓음)
-- 도메인 및 라우팅 설정 ( node끼리 통신하기 위해서 서로 알고있어야하며 iptable 라우팅 설정을 따르도록 해야함)
-- 쿠버네티스 repository 추가 (yum으로 쿠버네티스 파일을 다운로드받을 때, 해당 파일을 들고 있는 저장소를 추가해줌)
-- yum update (yum의 정상동작을 위해 update)
+- 모든 노드의 ntp 동기화
+- 모든 노드가 2GB 메모리, 2 CPU 이상인지 확인
+- 메모리 스왑 off
+
 ```bash
-# hostnamectl set-hostname uncmaster
-# swapoff -a && sudo sed -i '/ swap / s/^\(.*\)$/#\1/g' /etc/fstab
-# setenforce 0``
-# sed -i --follow-symlinks 's/SELINUX=enforcing/SELINUX=permissive/g' /etc/sysconfig/selinux
-# systemctl disable firewalld
-# systemctl stop firewalld
+    # nproc (코어)
+    # free -h (메모리)
+    # ifconfig -a (MAC)
+    # systemctl disable firewalld
+    # systemctl stop firewalld
+    # swapon -show
+    # swapoff -a
+    # grubby --update-kernel ALL --args selinux=0
+    # sestatus
 ```
 
 ## CRI Runtime
 
 ### 2.1 download 
-   https://github.com/containerd/containerd/releases   
+   - wget https://github.com/containerd/containerd/releases/download/v1.7.24/containerd-1.7.24-linux-amd64.tar.gz
+   - docker 가 설치되면 containerd 가 자동 설치되므로 별도 설치 필요없이 아래 설정을 적용 후 restart 하면 됨 
+   - Docker version 27.3.1 설치함 => containerd containerd.io 1.7.24 설치됨  
+   ```bash
+	    # containerd config default > /etc/containerd/config.toml
+	    # vi /etc/containerd/config.toml
+	         SystemdCgroup = true  <-- false 에서 true
+	    # systemctl restart containerd
+   ```     
+   
 ### 2.2 Extract tar file
-   ``# tar Cxzvf /usr/local containerd-1.6.2-linux-amd64.tar.gz``
-### 2.3 Start containerd
+   ``# tar Cxzvf /usr/local containerd-1.7.24-linux-amd64.tar.gz``
+   
+### 2.3 Start containerd 
    - containerd.service file 다운로드 : 
      https://raw.githubusercontent.com/containerd/containerd/main/containerd.service 를
      /usr/local/lib/systemd/system/containerd.service 로 다운로드.
      ```bash
      # systemctl daemon-reload
      # systemctl enable --now containerd
-     ```   
-### 2.4 Install runc
-   -  https://github.com/opencontainers/runc/releases 다운로드  /usr/local/sbin/runc 에 설치
+     ```
+        
+### 2.4 Install runc (필요한가???)
+   -  https://github.com/opencontainers/runc/releases 다운로드  
+   -  /usr/local/sbin/runc 에 설치
       ``# install -m 755 runc.amd64 /usr/local/sbin/runc``   
-### 2.5 Install CNI 
+      
+### 2.5 Install CNI (필요한가???)
    - https://github.com/containernetworking/plugins/releases 다운로드
      ```bash
      # mkdir -p /opt/cni/bin
      # tar Cxzvf /opt/cni/bin cni-plugins-linux-amd64-v1.1.1.tgz
      ```     
-### 2.6 Configuration 
-```bash
-    # containerd config default > /etc/containerd/config.toml
-    # vi /etc/containerd/config.toml
-         SystemdCgroup = true  <-- false 에서 true
-    # systemctl restart containerd
-```    
+  
 ## Install Kubernetes
+
 ### 3.1 쿠버네티스 yum repo 추가
+
 ```bash
 # cat <<EOF | tee /etc/yum.repos.d/kubernetes.repo
 [kubernetes]
@@ -74,8 +84,9 @@ gpgkey=https://pkgs.k8s.io/core:/stable:/v1.29/rpm/repodata/repomd.xml.key
 exclude=kubelet kubeadm kubectl cri-tools kubernetes-cni
 EOF
 ```
+
 ### 3.2 설치
-``# yum install -y kubelet kubeadm kubectl --disableexcludes=kubernetes``
+``# yum install -y kubelet kubeadm kubectl  --disableexcludes=kubernetes``
 ### 3.3 kubeadm 실행 전 kubelet 서비스 시작 
 ``# systemctl enable --now kubelet``
 ### 3.4 kubelet cgroup driver 설정
