@@ -1,4 +1,7 @@
 # 목차
+1. jdk 설치
+
+[docker용]
 1. gitea 설치
 2. jenkins 설치
 3. git repository 생성 
@@ -10,11 +13,59 @@
 	
 ---
 
+# JMX 설정 
+##### 자바 프로세스에 기본 JMX 설정  
+java -Dcom.sun.management.jmxremote \
+     -Dcom.sun.management.jmxremote.port=12345 \
+     -Dcom.sun.management.jmxremote.rmi.port=12346 \
+     -Dcom.sun.management.jmxremote.authenticate=true \
+     -Dcom.sun.management.jmxremote.password.file=/path/to/jmxremote.password \
+     -Dcom.sun.management.jmxremote.access.file=/path/to/jmxremote.access \
+     -Djava.rmi.server.hostname=your_server_ip \
+     -Dcom.sun.management.jmxremote.ssl=false \
+     -jar your-application.jar
+
+##### jmxremote.password 파일 예시
+monitorRole    secret_password
+controlRole    another_password
+
+##### jmxremote.password 파일 예시
+monitorRole    secret_password
+controlRole    another_password
+
+# OpenJDK 설치
+dnf search openjdk
+dnf install java-17-openjdk-devel.x86_64
+java -version
+
 # gitea 설치
 
-1. gitea 사이트에서 다운로드
+dnf install git -y
+wget -c https://dl.gitea.io/gitea/1.23.5/gitea-1.23.5-linux-amd64
+chmod +x gitea-1.18.0-linux-amd64
+mv gitea-1.18.0-linux-amd64 /usr/local/bin/gitea
 
-<img src="../../images/gitops/gitea1.png" width="25%" height="45%" title="gitea다운" alt="다운로드"></img>
+Gitea 관련 디렉토리 생성
+mkdir -p /var/lib/gitea
+mkdir -p /etc/gitea
+mkdir -p /var/log/gitea
+디렉토리 권한 설정
+chown -R gitea:gitea /var/lib/gitea
+chown -R gitea:gitea /etc/gitea
+chown -R gitea:gitea /var/log/gitea
+service 파일 생성
+nano /etc/systemd/system/gitea.service
+
+방화벽 설정 
+firewall-cmd --zone=public --add-port=3000/tcp --permanent
+firewall-cmd --reload
+
+systemd를 통해 Gitea 서비스 등록
+systemctl daemon-reload
+Gitea 서비스 시작
+sudo systemctl start gitea
+Gitea 서비스 자동 시작 설정
+systemctl enable gitea
 
 2. webhook 을 위해 app.ini 를 생성
 windows 일 경우 도움말을 확인하여 configFile 경로를 알 수 있다.<br/>
@@ -26,6 +77,23 @@ ALLOWED_HOST_LIST=*
 </pre></code>
     	
 # Jenkins 설치 
+##### yum 로 설치 
+1. jenkins GPG 설치, yum repo 설치
+rpm --import https://pkg.jenkins.io/redhat-stable/jenkins.io-2023.key
+dnf config-manager --add-repo https://pkg.jenkins.io/redhat-stable/jenkins.repo
+dnf install jenkins -y
+
+포트변경
+vi /usr/lib/systemd/system/jenkins.service
+
+방화벽 포트 열기
+ firewall-cmd --zone=public --add-port=18081/tcp --permanent
+ firewall-cmd --reload
+
+systemctl start jenkins
+systemctl enable jenkins
+systemctl status jenkins => 최초비번 복사 
+
 ##### Docker 로 설치 
 1. /dkdocs/docs/kube/Dockerfile-jenkins 파일로 Jenkins 설치
 2. /dkdocs/
@@ -60,10 +128,6 @@ Environment="JAVA_OPTS=-Duser.timezone=Asia/SEOUL"
 우측상단 ID > 설정 > User Defined Time Zone 에서 설정 
 	 
 ##### Kubernetes 로 설치 
-
-# git repository 생성
-
-# SpringBoot 프로젝트 생성
 
 # Jenkins pipeline 생성
 
@@ -193,7 +257,8 @@ git 의 여러 branch 를 하나의 jenkins job 으로 관리. 빌드이력에 d
 <pre><code>
 Branch Sources : Gitea Server, Credential, Owner(dkkim), Repository(devops-test), Discover Branches strategy(All Branches), Build Configuration scriptpath(Jenkinsfile), Trigger Token(devops-multibranch-test)
 </code></pre>
-    
+
+
 # NEXUS 설치
 
 1. windows 용일 경 
