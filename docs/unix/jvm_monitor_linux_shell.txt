@@ -12,3 +12,5 @@ lsof agent.log
 쓰레드확인
 ps -u jeus -L
 jcmd <pid> Thread.print > server_$(date +%Y%m%d_%H%M%S).dump
+메모리 확인
+jcmd <pid> GC.heap_dump
