@@ -1,0 +1,14 @@
+리눅스 명령
+
+df -h
+du -BG -d 1 | sort -nr
+방화벽 테스트
+windows tnc 10.8.140.1 -p 20014
+linux   nc -v 10.8.140.1 30014
+ls 초까지 보기
+ls -atl -- time-style=+"%Y-%m-%d %H:%M:%S" *.jar
+파일을 잡고 있는 프로세스 찾기
+lsof agent.log
+쓰레드확인
+ps -u jeus -L
+jcmd <pid> Thread.print > server_$(date +%Y%m%d_%H%M%S).dump
