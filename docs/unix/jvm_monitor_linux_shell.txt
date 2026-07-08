@@ -14,3 +14,9 @@ ps -u jeus -L
 jcmd <pid> Thread.print > server_$(date +%Y%m%d_%H%M%S).dump
 메모리 확인
 jcmd <pid> GC.heap_dump
+jcmd <pid> VM.metaspace
+jcmd <pid  VM.native_memory summary ;메타스페이스가 사용하는 native 메모리 모니터링 
+jcmd <piLea GC.run
+jmap -dump:live,format=b,file=leak.hprof <pid>
+MAT 에서 Leak suspects > 의심 객체 선택 > Path To GC Roots > exclude all phantom/weak/soft etc. references 선택 
+
